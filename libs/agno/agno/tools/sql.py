@@ -64,47 +64,105 @@ class SQLTools(Toolkit):
         super().__init__(name="sql_tools", tools=tools, **kwargs)
 
     def list_tables(self) -> str:
-        """Use this function to get a list of table names in the database.
+        """Use this function to get a list of table names in the database with row counts.
 
         Returns:
-            str: list of tables in the database.
+            str: list of tables and row counts in the database.
         """
         if self.tables is not None:
             return json.dumps(self.tables)
 
         try:
-            log_debug("listing tables in the database")
+            log_debug("Listing tables in the database")
             inspector = inspect(self.db_engine)
+
+            # → Get all table names
             if self.schema:
                 table_names = inspector.get_table_names(schema=self.schema)
             else:
                 table_names = inspector.get_table_names()
+
             log_debug(f"table_names: {table_names}")
-            return json.dumps(table_names)
+
+            # → Count rows for each table
+            table_info = {}
+            with self.Session() as session:
+                for table in table_names:
+                    try:
+                        # Safe generic SQL for all dialects
+                        count_query = f"SELECT COUNT(*) AS count FROM {table}"
+                        result = session.execute(text(count_query)).scalar()
+                    except Exception as e:
+                        result = f"Error counting rows: {e}"
+
+                    table_info[table] = {"row_count": result}
+
+            return json.dumps(table_info, indent=2)
+
         except Exception as e:
             logger.error(f"Error getting tables: {e}")
             return f"Error getting tables: {e}"
 
+
     def describe_table(self, table_name: str) -> str:
-        """Use this function to describe a table.
+        """Use this function to describe a table in detail.
 
         Args:
-            table_name (str): The name of the table to get the schema for.
+            table_name (str): The name of the table to get schema for.
 
         Returns:
-            str: schema of a table
+            str: JSON string with table schema + keys + constraints.
         """
-
         try:
             log_debug(f"Describing table: {table_name}")
             inspector = inspect(self.db_engine)
-            table_schema = inspector.get_columns(table_name, schema=self.schema)
-            return json.dumps(
-                [
-                    {"name": column["name"], "type": str(column["type"]), "nullable": column["nullable"]}
-                    for column in table_schema
-                ]
-            )
+
+            # → Columns
+            columns = inspector.get_columns(table_name, schema=self.schema)
+            column_details = []
+            for col in columns:
+                column_details.append({
+                    "name": col.get("name"),
+                    "type": str(col.get("type")),
+                    "nullable": col.get("nullable"),
+                    "default": str(col.get("default")),
+                    "primary_key": col.get("primary_key", False)
+                })
+
+            # → Primary Keys
+            primary_keys = inspector.get_primary_keys(table_name, schema=self.schema)
+
+            # → Foreign Keys
+            fk_raw = inspector.get_foreign_keys(table_name, schema=self.schema)
+            foreign_keys = []
+            for fk in fk_raw:
+                foreign_keys.append({
+                    "constrained_columns": fk.get("constrained_columns"),
+                    "referred_table": fk.get("referred_table"),
+                    "referred_columns": fk.get("referred_columns"),
+                    "name": fk.get("name"),
+                })
+
+            # → Unique Constraints
+            uc_raw = inspector.get_unique_constraints(table_name, schema=self.schema)
+            unique_constraints = [
+                {
+                    "name": uc.get("name"),
+                    "column_names": uc.get("column_names")
+                }
+                for uc in uc_raw
+            ]
+
+            result = {
+                "table": table_name,
+                "columns": column_details,
+                "primary_keys": primary_keys,
+                "foreign_keys": foreign_keys,
+                "unique_constraints": unique_constraints,
+            }
+
+            return json.dumps(result, indent=2)
+
         except Exception as e:
             logger.error(f"Error getting table schema: {e}")
             return f"Error getting table schema: {e}"
