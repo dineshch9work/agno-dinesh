@@ -1,12 +1,12 @@
 [project]
-name = "agno"
-version = "2.3.2"
+name = "agno-dinesh"
+version = "2.3.2.1"
 description = "Agno: a lightweight library for building Multi-Agent Systems"
 requires-python = ">=3.7,<4"
 readme = "README.md"
 license-files = ["LICENSE"]
 authors = [
-  {name = "Ashpreet Bedi", email = "ashpreet@agno.com"}
+  {name = "Dinesh Ch", email = "dineshch489@gmail.com"}
 ]
 keywords = [
   "agent",
