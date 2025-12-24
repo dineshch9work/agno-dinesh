@@ -704,11 +704,10 @@ class Agent:
             set_log_level_to_info()
 
     def _set_telemetry(self) -> None:
-        """Override telemetry settings based on environment variables."""
+        """Telemetry disabled in agno-dinesh fork."""
+        self.telemetry = False
+        return None
 
-        telemetry_env = getenv("AGNO_TELEMETRY")
-        if telemetry_env is not None:
-            self.telemetry = telemetry_env.lower() == "true"
 
     def _set_default_model(self) -> None:
         # Use the default Model (OpenAIChat) if no model is provided
@@ -10643,24 +10642,8 @@ class Agent:
         }
 
     def _log_agent_telemetry(self, session_id: str, run_id: Optional[str] = None) -> None:
-        """Send a telemetry event to the API for a created Agent run"""
-
-        self._set_telemetry()
-        if not self.telemetry:
-            return
-
-        from agno.api.agent import AgentRunCreate, create_agent_run
-
-        try:
-            create_agent_run(
-                run=AgentRunCreate(
-                    session_id=session_id,
-                    run_id=run_id,
-                    data=self._get_telemetry_data(),
-                ),
-            )
-        except Exception as e:
-            log_debug(f"Could not create Agent run telemetry event: {e}")
+        """Telemetry disabled in agno-dinesh fork."""
+        return None
 
     async def _alog_agent_telemetry(self, session_id: str, run_id: Optional[str] = None) -> None:
         """Send a telemetry event to the API for a created Agent async run"""

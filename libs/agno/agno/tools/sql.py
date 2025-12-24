@@ -63,8 +63,11 @@ class SQLTools(Toolkit):
 
         super().__init__(name="sql_tools", tools=tools, **kwargs)
 
+
+
     def list_tables(self) -> str:
-        """Use this function to get a list of table names in the database with row counts.
+        """
+        Use this function to get a list of table names in the database with row counts.
 
         Returns:
             str: list of tables and row counts in the database.
@@ -79,23 +82,44 @@ class SQLTools(Toolkit):
             # → Get all table names
             if self.schema:
                 table_names = inspector.get_table_names(schema=self.schema)
+                schema_name = self.schema
             else:
                 table_names = inspector.get_table_names()
+                schema_name = self.db_engine.url.database
 
             log_debug(f"table_names: {table_names}")
 
-            # → Count rows for each table
             table_info = {}
+
             with self.Session() as session:
                 for table in table_names:
+
+                    # → Row count
                     try:
-                        # Safe generic SQL for all dialects
                         count_query = f"SELECT COUNT(*) AS count FROM {table}"
                         result = session.execute(text(count_query)).scalar()
                     except Exception as e:
                         result = f"Error counting rows: {e}"
 
-                    table_info[table] = {"row_count": result}
+                    # → Table description (comment)
+                    try:
+                        desc_query = text("""
+                            SELECT table_comment
+                            FROM information_schema.tables
+                            WHERE table_schema = :schema
+                            AND table_name = :table
+                        """)
+                        description = session.execute(
+                            desc_query,
+                            {"schema": schema_name, "table": table}
+                        ).scalar()
+                    except Exception:
+                        description = None
+
+                    table_info[table] = {
+                        "row_count": result,
+                        "description": description
+                    }
 
             return json.dumps(table_info, indent=2)
 
@@ -104,38 +128,61 @@ class SQLTools(Toolkit):
             return f"Error getting tables: {e}"
 
 
+
+
     def describe_table(self, table_name: str) -> str:
-        """Use this function to describe a table in detail.
-
-        Args:
-            table_name (str): The name of the table to get schema for.
-
-        Returns:
-            str: JSON string with table schema + keys + constraints.
-        """
+        """Describe table schema including columns, keys, constraints, and descriptions."""
         try:
             log_debug(f"Describing table: {table_name}")
             inspector = inspect(self.db_engine)
 
-            # → Columns
+            schema_name = self.schema or self.db_engine.url.database
+
+            # -------------------------------------------------
+            # TABLE DESCRIPTION (same pattern as list_tables)
+            # -------------------------------------------------
+            try:
+                with self.Session() as session:
+                    desc_query = text("""
+                        SELECT table_comment
+                        FROM information_schema.tables
+                        WHERE table_schema = :schema
+                        AND table_name = :table
+                    """)
+                    table_description = session.execute(
+                        desc_query,
+                        {"schema": schema_name, "table": table_name}
+                    ).scalar()
+            except Exception:
+                table_description = None
+
+            # -------------------------------------------------
+            # COLUMNS
+            # -------------------------------------------------
             columns = inspector.get_columns(table_name, schema=self.schema)
             column_details = []
+
             for col in columns:
                 column_details.append({
                     "name": col.get("name"),
                     "type": str(col.get("type")),
                     "nullable": col.get("nullable"),
                     "default": str(col.get("default")),
-                    "primary_key": col.get("primary_key", False)
+                    "primary_key": col.get("primary_key", False),
+                    "description": col.get("comment")
                 })
 
-            # → Primary Keys
-            primary_keys = inspector.get_primary_keys(table_name, schema=self.schema)
+            # -------------------------------------------------
+            # PRIMARY KEYS (ONLY VALID API)
+            # -------------------------------------------------
+            pk = inspector.get_pk_constraint(table_name, schema=self.schema)
+            primary_keys = pk.get("constrained_columns", []) if pk else []
 
-            # → Foreign Keys
-            fk_raw = inspector.get_foreign_keys(table_name, schema=self.schema)
+            # -------------------------------------------------
+            # FOREIGN KEYS
+            # -------------------------------------------------
             foreign_keys = []
-            for fk in fk_raw:
+            for fk in inspector.get_foreign_keys(table_name, schema=self.schema):
                 foreign_keys.append({
                     "constrained_columns": fk.get("constrained_columns"),
                     "referred_table": fk.get("referred_table"),
@@ -143,18 +190,20 @@ class SQLTools(Toolkit):
                     "name": fk.get("name"),
                 })
 
-            # → Unique Constraints
-            uc_raw = inspector.get_unique_constraints(table_name, schema=self.schema)
+            # -------------------------------------------------
+            # UNIQUE CONSTRAINTS
+            # -------------------------------------------------
             unique_constraints = [
                 {
                     "name": uc.get("name"),
                     "column_names": uc.get("column_names")
                 }
-                for uc in uc_raw
+                for uc in inspector.get_unique_constraints(table_name, schema=self.schema)
             ]
 
             result = {
                 "table": table_name,
+                "description": table_description,
                 "columns": column_details,
                 "primary_keys": primary_keys,
                 "foreign_keys": foreign_keys,
@@ -166,6 +215,7 @@ class SQLTools(Toolkit):
         except Exception as e:
             logger.error(f"Error getting table schema: {e}")
             return f"Error getting table schema: {e}"
+
 
     def run_sql_query(self, query: str, limit: Optional[int] = 10) -> str:
         """Use this function to run a SQL query and return the result.

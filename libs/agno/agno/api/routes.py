@@ -1,13 +1,38 @@
 from dataclasses import dataclass
 
 
+from dataclasses import dataclass
+
 @dataclass
 class ApiRoutes:
-    """API routes for telemetry recordings"""
+    """API routes disabled in agno-dinesh offline fork."""
 
-    # Runs
-    RUN_CREATE: str = "/telemetry/runs"
-    EVAL_RUN_CREATE: str = "/telemetry/evals"
+    # Disabled telemetry routes
+    RUN_CREATE: str = ""
+    EVAL_RUN_CREATE: str = ""
+    AGENT_OS_LAUNCH: str = ""
 
-    # OS launch
-    AGENT_OS_LAUNCH: str = "/telemetry/os"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @dataclass
+# class ApiRoutes:
+#     """API routes for telemetry recordings"""
+
+#     # Runs
+#     RUN_CREATE: str = "/telemetry/runs"
+#     EVAL_RUN_CREATE: str = "/telemetry/evals"
+
+#     # OS launch
+#     AGENT_OS_LAUNCH: str = "/telemetry/os"

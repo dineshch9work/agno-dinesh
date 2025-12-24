@@ -1,0 +1,68 @@
+Publishing a New Version of agno-dinesh to PyPI (Full Steps)
+1. Update version in pyproject.toml
+
+Open:
+
+libs/agno/pyproject.toml
+
+
+Modify:
+
+version = "2.3.2.X"   # replace X with new version number
+
+2. Clean old build artifacts
+cd /media/ailab/data1/GitRepo/agno-dinesh/libs/agno
+rm -rf dist build *.egg-info
+
+do changes
+
+
+3. Build the new package
+
+Make sure your virtual environment is activated.
+
+python -m pip install --upgrade pip build
+python -m build
+
+
+Expected output files:
+
+dist/agno_dinesh-2.3.2.X.tar.gz
+dist/agno_dinesh-2.3.2.X-py3-none-any.whl
+
+4. (Optional) Test install locally
+python -m venv testenv
+source testenv/bin/activate
+pip install dist/agno_dinesh-2.3.2.X-py3-none-any.whl
+python - << 'EOF'
+from agno.agent import Agent
+print(Agent(enable_ui=False).run("Hello"))
+EOF
+deactivate
+
+5. Upload to PyPI
+
+Move into the dist folder:
+
+cd dist
+twine upload *
+
+
+If twine is not installed:
+
+python -m pip install twine
+twine upload *
+
+
+Check the uploaded version at:
+
+https://pypi.org/project/agno-dinesh/
+
+6. Push changes to GitHub
+
+Go to repository root:
+
+cd /media/ailab/NewVolume/GitRepo/agno-dinesh
+git add .
+git commit -m "Release 2.3.2.X - updates and fixes"
+git push origin main

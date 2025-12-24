@@ -10,13 +10,13 @@ from agno.utils.log import logger
 
 
 class AgnoAPISettings(BaseSettings):
-    app_name: str = "agno"
-    app_version: str = metadata.version("agno")
+    app_name: str = "agno-dinesh"
+    app_version: str = metadata.version("agno-dinesh")
 
     api_runtime: str = "prd"
     alpha_features: bool = False
 
-    api_url: str = "https://os-api.agno.com"
+    api_url: str = "offline"
 
     model_config = SettingsConfigDict(env_prefix="AGNO_")
 

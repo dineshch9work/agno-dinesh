@@ -35,7 +35,8 @@ class PandasTools(Toolkit):
 
         For Example:
         - To create a dataframe `csv_data` by reading a CSV file, use: {"dataframe_name": "csv_data", "create_using_function": "read_csv", "function_parameters": {"filepath_or_buffer": "data.csv"}}
-        - To create a dataframe `csv_data` by reading a JSON file, use: {"dataframe_name": "json_data", "create_using_function": "read_json", "function_parameters": {"path_or_buf": "data.json"}}
+        - To create a dataframe `json_data` by reading a JSON file, use: {"dataframe_name": "json_data", "create_using_function": "read_json", "function_parameters": {"path_or_buf": "data.json"}}
+        - To create a dataframe `excel_data` by reading an Excel(.xlsx) file, use:{"dataframe_name": "excel_data","create_using_function": "read_excel", "function_parameters": {"io": "data.xlsx"}}
 
         :param dataframe_name: The name of the dataframe to create.
         :param create_using_function: The function to use to create the dataframe.
